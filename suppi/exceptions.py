@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 class SuppiError(Exception):
-    pass
+    RETURN_CODE = 2
 
 
 class UnknownDeviceId(SuppiError):
@@ -16,3 +16,7 @@ class UnknownDeviceId(SuppiError):
 
     def __str__(self):
         return f'Unknown device id {self.measurement.device_id!r}'
+
+
+class SettingsModuleError(SuppiError):
+    RETURN_CODE = 3

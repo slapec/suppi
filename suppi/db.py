@@ -44,6 +44,11 @@ class Database:
     async def __aenter__(self):
         assert self._db is None
 
+        async def execute(query):
+            log.debug(query)
+            c.execute(query)
+            await switch()
+
         log.info('Opening DB')
         self._db = db = sqlite3.connect(str(self._path))
         atexit.register(self._close)
@@ -52,19 +57,14 @@ class Database:
         await switch()
 
         async with self.cursor() as c:
-            log.debug('Creating table if not exists: sources')
-
-            c.execute('''
+            await execute('''
                 CREATE TABLE IF NOT EXISTS sources(
                     id TEXT NOT NULL PRIMARY KEY,
                     runtime_device_id TEXT NOT NULL
                 )
-                ''')
+            ''')
 
-            await switch()
-
-            log.debug('Creating table if not exists: measurements')
-            c.execute('''
+            await execute('''
                 CREATE TABLE IF NOT EXISTS measurements(
                     source_id TEXT NOT NULL REFERENCES sources(id),
                     temperature REAL NOT NULL,
@@ -72,11 +72,9 @@ class Database:
                     created_at TEXT NOT NULL,
                     received_at TEXT NOT NULL 
                 );
-                ''')
+            ''')
 
-            await switch()
-            log.debug('Creating table if not exists: failures')
-            c.execute('''
+            await execute('''
                 CREATE TABLE IF NOT EXISTS failures(
                     received_at TEXT NOT NULL,
                     payload BLOB NOT NULL
