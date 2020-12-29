@@ -10,7 +10,6 @@ Suppi is my weekend Raspberry Pi project for monitoring some of my sensors at my
 
 ### Why not Home Assistant?
 
-HomeAssistant is a gigantic project. Don't get me wrong, it's a great piece software. I also host an instance myself
-on my home server. However this time I wanted to keep it simple, small and know exactly how everything works. It's
-also a good exercise.
-
+Home Assistant is gigantic home automation project, while Suppi is just trying to monitor things.
+Also, I'm not trying to beat HA here or something. I just wanted to keep the whole thing simple, small and know exactly
+how everything works. It's a good exercise too.

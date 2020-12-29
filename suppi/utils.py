@@ -3,8 +3,12 @@
 import asyncio
 import importlib
 import logging
+from typing import TYPE_CHECKING
 
 from suppi import models, exceptions as exc
+
+if TYPE_CHECKING:
+    from suppi.sources.base import BaseSource
 
 log = logging.getLogger(__name__)
 
@@ -34,3 +38,8 @@ def import_settings(settings_module_name: str) -> models.Settings:
             f'Failed to import settings from the {settings_module_name!r} Python module.'
             f' See the traceback for more information.'
         )
+
+
+async def consume_source(source: 'BaseSource', queue: asyncio.Queue):
+    async for measurement in source:
+        await queue.put(measurement)

@@ -2,15 +2,13 @@
 
 import pathlib
 
-from suppi import db, sources
+from suppi import db, sources, protocols
+
 
 APP_DIR = pathlib.Path(__file__).parent
 
-DATABASE = db.Database(APP_DIR / 'appdata/suppi.sqlite3')
+DATABASE = db.Sqlite(APP_DIR / 'appdata/suppi.sqlite3')
 
 SOURCES = [
-    sources.DummyFileSource(
-        file_path=APP_DIR / '/temp.json',
-        # protocol=protocols.Rtl433
-    )
+    sources.FileSource(protocols.Rtl433(), APP_DIR / 'temp.json')
 ]

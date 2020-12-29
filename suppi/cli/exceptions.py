@@ -4,4 +4,4 @@ from suppi import exceptions as exc
 
 
 class CliError(exc.SuppiError):
-    RETURN_CODE = 2
+    RETURN_CODE = 4

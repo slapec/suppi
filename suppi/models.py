@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional
 
 if TYPE_CHECKING:
-    from suppi import sources, db
+    from suppi.db.base import BaseDatabase
+    from suppi.sources.base import BaseSource
 
 
 class Event(NamedTuple):
@@ -28,8 +29,8 @@ class Measurement(NamedTuple):
 
 
 class Settings:
-    DATABASE: 'db.Database'
-    SOURCES: Iterable['sources.BaseSource']
+    DATABASE: 'BaseDatabase'
+    SOURCES: Iterable['BaseSource']
     LOGGING: Dict[str, Any] = {
         'version': 1,
         'disable_existing_loggers': False,

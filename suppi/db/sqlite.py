@@ -5,9 +5,9 @@ import contextlib
 import logging
 import pathlib
 import sqlite3
-from typing import TYPE_CHECKING, Optional, Dict
+from typing import TYPE_CHECKING, Optional
 
-from suppi import exceptions as exc
+from suppi.db.base import BaseDatabase
 from suppi.utils import switch
 
 if TYPE_CHECKING:
@@ -15,15 +15,13 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-DeviceToSourceType = Dict[str, str]
 
-
-class Database:
+class Sqlite(BaseDatabase):
     def __init__(self, path: pathlib.Path):
+        super().__init__()
+
         self._path = path
         self._db: Optional[sqlite3.Connection] = None
-
-        self._device_id_to_source_id: Optional[DeviceToSourceType] = None
 
         log.info('DB path is: %s', self._path)
 
@@ -56,7 +54,7 @@ class Database:
         log.debug('DB: %s', db)
         await switch()
 
-        async with self.cursor() as c:
+        async with self._cursor() as c:
             await execute('''
                 CREATE TABLE IF NOT EXISTS sources(
                     id TEXT NOT NULL PRIMARY KEY,
@@ -75,7 +73,7 @@ class Database:
             ''')
 
             await execute('''
-                CREATE TABLE IF NOT EXISTS failures(
+                CREATE TABLE IF NOT EXISTS events(
                     received_at TEXT NOT NULL,
                     payload BLOB NOT NULL
                 )
@@ -86,12 +84,12 @@ class Database:
 
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *args, **kwargs):
         log.debug('Leaving the DB context')
         self._close()
 
     @contextlib.asynccontextmanager
-    async def cursor(self):
+    async def _cursor(self):
         assert self._db
 
         db = self._db
@@ -109,56 +107,41 @@ class Database:
             await switch()
             raise
 
-    async def add_measurement(self, measurement: 'models.Measurement'):
-        log.debug('Persisting %s', measurement)
-        try:
-            source_id = self._device_id_to_source_id[measurement.device_id]
-
-        except KeyError:
-            log.warning('Received unknown device id: %s', measurement)
-            await self.add_event(measurement.event)
-
-            raise exc.UnknownDeviceId(measurement)
-
-        else:
-            async with self.cursor() as c:
-                c.execute('''
-                INSERT INTO measurements(source_id, temperature, humidity, created_at, received_at)
-                VALUES (?, ?, ?, ?, ?) 
-                ''', (
-                    source_id,
-                    measurement.temperature,
-                    measurement.humidity,
-                    measurement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    measurement.event.received_at.strftime('%Y-%m-%d %H:%M:%S')
-                ))
-
-            log.debug('Measurement has been added successfully')
-
-    async def add_event(self, event: 'models.Event'):
-        log.debug('Persisting %s', event)
-        async with self.cursor() as c:
-            c.execute('''
-            INSERT INTO failures(received_at, payload)
-            VALUES (?, ?)
-            ''', (
-                event.received_at.strftime('%Y-%m-%d %H:%M:%S'),
-                event.payload
-            ))
-
-        log.debug('Failure has been added successfully')
-
-    async def bind_device_to_source(self, device_id: str, source_id: str):
-        log.info('Device id %r is now bound to source id %r', device_id, source_id)
-        async with self.cursor() as c:
+    async def _bind_device_to_source(self, device_id: str, source_id: str):
+        async with self._cursor() as c:
             c.execute('''
             INSERT INTO sources(runtime_device_id, id) 
             VALUES (?, ?)
             ON CONFLICT(id) DO UPDATE
             SET runtime_device_id = ?''', (device_id, source_id, device_id))
 
-    async def bind_devices_to_sources(self, device_id_to_source_id: DeviceToSourceType):
-        self._device_id_to_source_id = {**device_id_to_source_id}
-        for device_id, source_id in device_id_to_source_id.items():
-            await self.bind_device_to_source(device_id, source_id)
-            await switch()
+    async def save_measurement(self, measurement: 'models.Measurement'):
+        log.debug('Saving %s', measurement)
+        source_id = self.resolve_source_id_of_measurement(measurement)
+
+        async with self._cursor() as c:
+            c.execute('''
+            INSERT INTO measurements(source_id, temperature, humidity, created_at, received_at)
+            VALUES (?, ?, ?, ?, ?) 
+            ''', (
+                source_id,
+                measurement.temperature,
+                measurement.humidity,
+                measurement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                measurement.event.received_at.strftime('%Y-%m-%d %H:%M:%S')
+            ))
+
+        log.debug('Saved measurement successfully')
+
+    async def save_event(self, event: 'models.Event'):
+        log.debug('Saving %s', event)
+        async with self._cursor() as c:
+            c.execute('''
+            INSERT INTO events(received_at, payload)
+            VALUES (?, ?)
+            ''', (
+                event.received_at.strftime('%Y-%m-%d %H:%M:%S'),
+                event.payload
+            ))
+
+        log.debug('Saved event successfully')
