@@ -1,11 +1,12 @@
 # coding: utf-8
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Union
 
 if TYPE_CHECKING:
     from suppi.db.base import BaseDatabase
     from suppi.sources.base import BaseSource
+    from suppi.sources.decorators import _BaseDecorator  # noqa
 
 
 class Event(NamedTuple):
@@ -30,7 +31,7 @@ class Measurement(NamedTuple):
 
 class Settings:
     DATABASE: 'BaseDatabase'
-    SOURCES: Iterable['BaseSource']
+    SOURCES: Iterable[Union['BaseSource', '_BaseDecorator']]
     LOGGING: Dict[str, Any] = {
         'version': 1,
         'disable_existing_loggers': False,

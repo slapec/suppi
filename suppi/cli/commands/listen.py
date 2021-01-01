@@ -16,6 +16,10 @@ log = logging.getLogger(__name__)
 
 async def main(settings: models.Settings):
     async with settings.DATABASE as db, manager.SourceManager(settings.SOURCES) as sources:
+        for source in sources.sources:
+            for device_id, source_id in source.protocol.device_source_map.items():
+                await db.bind_device_to_source(device_id, source_id)
+
         async for measurement in sources:  # type: models.Measurement
             try:
                 await db.save_measurement(measurement)

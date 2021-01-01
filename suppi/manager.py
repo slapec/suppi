@@ -20,6 +20,10 @@ class SourceManager:
 
         self._queue_from_tasks: Optional[asyncio.Queue] = None
 
+    @property
+    def sources(self):
+        return self._sources
+
     def __aiter__(self):
         return self
 
@@ -41,7 +45,9 @@ class SourceManager:
 
     async def __anext__(self):
         assert self._queue_from_tasks is not None
-        return await self._queue_from_tasks.get()
+        measurement = await self._queue_from_tasks.get()
+        self._queue_from_tasks.task_done()
+        return measurement
 
     async def __aexit__(self, *args, **kwargs):
         log.debug('Shutting down resources: %s', self._sources)

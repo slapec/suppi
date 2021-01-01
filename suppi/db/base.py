@@ -38,9 +38,11 @@ class BaseDatabase:
         raise NotImplementedError
 
     async def bind_device_to_source(self, device_id: str, source_id: str):
+        # TODO: this assumes that device_id is globally unique. It should be unique in the scope of each source object
         if device_id in self._device_id_to_source_id:
             raise exc.DeviceIdConflict(device_id, self._device_id_to_source_id[device_id], source_id)
 
         log.debug('Binding id %r to source id %r', device_id, source_id)
         await self._bind_device_to_source(device_id, source_id)
+        self._device_id_to_source_id[device_id] = source_id
         log.info('Device id %r is now bound to source id %r', device_id, source_id)

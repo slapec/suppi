@@ -10,6 +10,10 @@ class BaseSource:
     def __init__(self, protocol: 'BaseProtocol'):
         self._protocol = protocol
 
+    @property
+    def protocol(self):
+        return self._protocol
+
     async def __aenter__(self):
         raise NotImplementedError
 
