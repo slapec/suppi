@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Uni
 if TYPE_CHECKING:
     from suppi.db.base import BaseDatabase
     from suppi.sources.base import BaseSource
-    from suppi.sources.decorators import _BaseDecorator  # noqa
+    from suppi.sources.decorators import _BaseSourceDecorator  # noqa
 
 
-class Event(NamedTuple):
+class SourceEvent(NamedTuple):
     payload: bytes
     received_at: datetime
 
@@ -22,16 +22,21 @@ class Event(NamedTuple):
 
 
 class Measurement(NamedTuple):
-    event: Event
-    device_id: str
+    source_event: SourceEvent
+    sensor_id: str
     temperature: float
     humidity: Optional[float]
     created_at: datetime
 
 
+class ProtocolEvent(NamedTuple):
+    source_event: SourceEvent
+    measurement: Optional[Measurement]
+
+
 class Settings:
     DATABASE: 'BaseDatabase'
-    SOURCES: Iterable[Union['BaseSource', '_BaseDecorator']]
+    SOURCES: Iterable[Union['BaseSource', '_BaseSourceDecorator']]
     LOGGING: Dict[str, Any] = {
         'version': 1,
         'disable_existing_loggers': False,

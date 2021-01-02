@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Optional
 
 from suppi import manager, models
 from suppi.cli.parser import subparsers
-from suppi.db import exceptions as db_exc
 
 if TYPE_CHECKING:
     import argparse
@@ -17,16 +16,16 @@ log = logging.getLogger(__name__)
 async def main(settings: models.Settings):
     async with settings.DATABASE as db, manager.SourceManager(settings.SOURCES) as sources:
         for source in sources.sources:
-            for device_id, source_id in source.protocol.device_source_map.items():
-                await db.bind_device_to_source(device_id, source_id)
+            for sensor_id in source.protocol.sensor_id_translations.values():
+                await db.register_sensor_id(sensor_id)
 
-        async for measurement in sources:  # type: models.Measurement
-            try:
+        async for protocol_event in sources:  # type: models.ProtocolEvent
+            measurement = protocol_event.measurement
+            if measurement is not None:
                 await db.save_measurement(measurement)
 
-            except db_exc.UnknownDeviceId as e:
-                log.warning(e)
-                await db.save_event(measurement.event)
+            else:
+                await db.save_event(protocol_event.source_event)
 
         log.info('No more measurements are left, exiting.')
 

@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from suppi.sources.base import BaseSource
 
 
-class _BaseDecorator:
-    def __init__(self, source: Union['BaseSource', '_BaseDecorator']):
+class _BaseSourceDecorator:
+    def __init__(self, source: Union['BaseSource', '_BaseSourceDecorator']):
         self._source = source
 
     @property
@@ -31,28 +31,37 @@ class _BaseDecorator:
         raise NotImplementedError
 
 
-class repeat(_BaseDecorator):  # noqa
+class repeat(_BaseSourceDecorator):  # noqa
     async def __aiter__(self):
-        measurements = []
+        protocol_events = []
         async with self._source as source:
-            async for measurement in source:
-                measurements.append(measurement)
-                yield measurement
+            async for protocol_event in source:
+                protocol_events.append(protocol_event)
+                yield protocol_event
                 await switch()
 
-        cycle = itertools.cycle(measurements)
-        for measurement in cycle:
-            yield measurement
+        cycle = itertools.cycle(protocol_events)
+        for protocol_event in cycle:
+            yield protocol_event
             await switch()
 
+    def __repr__(self):
+        return f'<repeat({self._source})>'
 
-class lag(_BaseDecorator):  # noqa
-    def __init__(self, source: Union['BaseSource', '_BaseDecorator'], delay: float):
+
+class lag(_BaseSourceDecorator):  # noqa
+    def __init__(self, source: Union['BaseSource', '_BaseSourceDecorator'], delay: float):
         super().__init__(source)
         self._delay = delay
 
     async def __aiter__(self):
         async with self._source as source:
-            async for measurement in source:
-                yield measurement
+            async for protocol_event in source:
+                yield protocol_event
                 await asyncio.sleep(self._delay)
+
+    def __repr__(self):
+        return '<lag({source}, delay={delay:.2f})>'.format(
+            source=self._source,
+            delay=self._delay
+        )

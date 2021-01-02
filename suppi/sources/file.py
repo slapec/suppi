@@ -40,21 +40,24 @@ class FileSource(base.BaseSource):
     def __aiter__(self):
         return self
 
-    async def __anext__(self) -> models.Measurement:
+    async def __anext__(self) -> models.ProtocolEvent:
         assert self._file is not None
 
         try:
             line = next(self._line_it)
-            event = models.Event.with_defaults(line)
+            source_event = models.SourceEvent.with_defaults(line)
 
         except StopIteration:
             raise StopAsyncIteration
 
+        measurement = None
         try:
-            measurement = await self._protocol.on_event(event)
+            measurement = await self._protocol.on_event(source_event)
 
         except exc.ProtocolError:
-            log.exception('Failed to parse %s', event.payload)
+            log.exception('Failed to handle %s', source_event.payload)
 
-        else:
-            return measurement
+        return models.ProtocolEvent(source_event, measurement)
+
+    def __repr__(self):
+        return f'<FileSource({self._protocol!r}, {self._file_path})>'

@@ -56,19 +56,20 @@ class Sqlite(BaseDatabase):
 
         async with self._cursor() as c:
             await execute('''
-                CREATE TABLE IF NOT EXISTS sources(
-                    id TEXT NOT NULL PRIMARY KEY,
-                    runtime_device_id TEXT NOT NULL
+                CREATE TABLE IF NOT EXISTS sensors(
+                    id TEXT NOT NULL PRIMARY KEY
                 )
             ''')
 
             await execute('''
                 CREATE TABLE IF NOT EXISTS measurements(
-                    source_id TEXT NOT NULL REFERENCES sources(id),
-                    temperature REAL NOT NULL,
-                    humidity REAL NULL,
+                    sensor_id TEXT NOT NULL REFERENCES sensors(id),
                     created_at TEXT NOT NULL,
-                    received_at TEXT NOT NULL 
+                    received_at TEXT NOT NULL,
+                    
+                    -- TODO: Might switch to json one day
+                    temperature REAL NOT NULL,
+                    humidity REAL NULL
                 );
             ''')
 
@@ -107,34 +108,36 @@ class Sqlite(BaseDatabase):
             await switch()
             raise
 
-    async def _bind_device_to_source(self, device_id: str, source_id: str):
+    async def register_sensor_id(self, sensor_id: str):
+        log.debug('Registering sensor_id %r', sensor_id)
         async with self._cursor() as c:
             c.execute('''
-            INSERT INTO sources(runtime_device_id, id) 
-            VALUES (?, ?)
-            ON CONFLICT(id) DO UPDATE
-            SET runtime_device_id = ?''', (device_id, source_id, device_id))
+            INSERT INTO sensors(id) 
+            VALUES (?)
+            ON CONFLICT DO NOTHING 
+            ''', (sensor_id,))
+        log.debug('Sensor has been registered')
 
     async def save_measurement(self, measurement: 'models.Measurement'):
         log.debug('Saving %s', measurement)
-        source_id = self.resolve_source_id_of_measurement(measurement)
 
         async with self._cursor() as c:
             c.execute('''
-            INSERT INTO measurements(source_id, temperature, humidity, created_at, received_at)
+            INSERT INTO measurements(sensor_id, created_at, received_at, temperature, humidity)
             VALUES (?, ?, ?, ?, ?) 
             ''', (
-                source_id,
-                measurement.temperature,
-                measurement.humidity,
+                measurement.sensor_id,
                 measurement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                measurement.event.received_at.strftime('%Y-%m-%d %H:%M:%S')
+                measurement.source_event.received_at.strftime('%Y-%m-%d %H:%M:%S'),
+                measurement.temperature,
+                measurement.humidity
             ))
 
         log.debug('Saved measurement successfully')
 
-    async def save_event(self, event: 'models.Event'):
+    async def save_event(self, event: 'models.SourceEvent'):
         log.debug('Saving %s', event)
+
         async with self._cursor() as c:
             c.execute('''
             INSERT INTO events(received_at, payload)

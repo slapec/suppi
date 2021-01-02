@@ -45,9 +45,9 @@ class SourceManager:
 
     async def __anext__(self):
         assert self._queue_from_tasks is not None
-        measurement = await self._queue_from_tasks.get()
+        protocol_event = await self._queue_from_tasks.get()
         self._queue_from_tasks.task_done()
-        return measurement
+        return protocol_event
 
     async def __aexit__(self, *args, **kwargs):
         log.debug('Shutting down resources: %s', self._sources)

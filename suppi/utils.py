@@ -41,5 +41,5 @@ def import_settings(settings_module_name: str) -> models.Settings:
 
 
 async def consume_source(source: 'BaseSource', queue: asyncio.Queue):
-    async for measurement in source:
-        await queue.put(measurement)
+    async for protocol_event in source:
+        await queue.put(protocol_event)

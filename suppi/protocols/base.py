@@ -9,12 +9,12 @@ if TYPE_CHECKING:
 
 
 class BaseProtocol:
-    def __init__(self, device_source_map: Dict[str, str]):
-        self._device_source_map = copy.deepcopy(device_source_map)
+    def __init__(self, sensor_id_translations: Dict[str, str]):
+        self._sensor_id_translations = copy.deepcopy(sensor_id_translations)
 
     @property
-    def device_source_map(self):
-        return MappingProxyType(self._device_source_map)
+    def sensor_id_translations(self):
+        return MappingProxyType(self._sensor_id_translations)
 
-    async def on_event(self, event: 'models.Event') -> 'models.Measurement':
+    async def on_event(self, source_event: 'models.SourceEvent') -> 'models.Measurement':
         raise NotImplementedError
